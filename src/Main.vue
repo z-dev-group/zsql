@@ -1,39 +1,50 @@
 <template>
-  <div>
-    <el-row>
-      <el-col :span="6">
-        <el-select v-model="selectedDatabase" placeholder="请选择数据库">
-          <el-option v-for="database in databases" :key="database" :label="database" :value="database" />
-        </el-select>
-        <el-menu v-if="selectedDatabase">
-          <el-menu-item v-for="table in tables" :key="table.name" :index="table.name"
+  <div style="padding: 10px;">
+    <div style="display: flex;">
+      <div style="width: 200px; border-left: 1px solid #e6e6e6; padding-left: 10px;">
+        <div>
+          <el-select v-model="selectedDatabase" placeholder="请选择数据库" filterable style="width: 100%;" clearable>
+            <el-option v-for="database in databases" :key="database" :label="database" :value="database" />
+          </el-select>
+          <el-input v-model="filterTable" placeholder="请输入表名进行过滤" v-if="selectedDatabase" style="width: 100%; margin-top: 10px;" clearable size="small" />
+        </div>
+        <el-menu v-if="selectedDatabase" style="height: 30px;">
+          <el-menu-item v-for="table in showTables" :key="table.name" :index="table.name" style="height: 35px;"
             @click="selectTable(table.name)">{{ table.name }}</el-menu-item>
         </el-menu>
-      </el-col>
-      <el-col :span="16">
-        <el-tabs v-model="selectedTab">
-          <el-tab-pane v-if="selectedTable" :label="selectedTable">
-            <el-table :data="tableData" style="width: 100%">
-              <el-table-column v-for="column in tableColumns" :key="column.Field" :label="column.Field"
-                :prop="column.Field" />
-            </el-table>
+        <div v-else style="height: 100vh; display: flex; justify-content: center; align-items: center;">
+          <el-empty description="请选择数据库" />
+        </div>
+      </div>
+      <div style="flex: 1; margin-left: 3px;">
+        <el-tabs v-model="selectedTab" type="card" editable @edit="handleEditTab">
+          <el-tab-pane v-if="selectedTable" :label="selectedTable" :name="selectedTable">
+            <div style="height: 100vh">
+              <el-auto-resizer>
+                <template #default="{ height, width }">
+                  <el-table-v2 :data="tableData" :width="width" :height="height" :columns="tableColumns"
+                    fixed></el-table-v2>
+                </template>
+              </el-auto-resizer>
+            </div>
           </el-tab-pane>
-          <el-tab-pane v-for="query in moreQuerys" :key="query.name" :label="query.name">
+          <el-tab-pane v-for="query in moreQuerys" :key="query.name" :label="query.name" :name="query.name">
             <el-input v-model="query.sql" type="textarea" :rows="3" />
             <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
               <el-button type="primary" @click="querySql(query)">查询</el-button>
             </div>
-            <el-table :data="query.result" style="width: 100%">
-              <el-table-column v-for="column in query.resultColumns" :key="column" :label="column"
-                :prop="column" />
-            </el-table>
+            <div style="height: 100vh">
+              <el-auto-resizer>
+                <template #default="{ height, width }">
+                  <el-table-v2 :data="query.result" :width="width" :height="height" :columns="query.resultColumns"
+                    fixed></el-table-v2>
+                </template>
+              </el-auto-resizer>
+            </div>
           </el-tab-pane>
         </el-tabs>
-      </el-col>
-      <el-col :span="2">
-        <el-button type="primary" @click="addMoreQuery">添加</el-button>
-      </el-col>
-    </el-row>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -50,38 +61,80 @@ export default {
       tableColumns: [],
       tableData: [],
       selectedTable: '',
-      moreQuerys: []
+      moreQuerys: [],
+      selectedTab: '',
+      filterTable: ''
     }
   },
   computed: {
     databases() {
       return store.databases;
+    },
+    showTables() {
+      if (!this.filterTable) return this.tables;
+      return this.tables.filter(table => table.name.includes(this.filterTable));
     }
   },
   watch: {
     selectedDatabase: {
       handler(newVal) {
+        if (!newVal) {
+          this.selectedTable = '';
+          return;
+        }
+        this.filterTable = '';
         this.selectDatabase(newVal);
       },
       immediate: true
     }
   },
   methods: {
+    handleEditTab(targetName, action) {
+      console.log("handleEditTab", targetName, action);
+      if (action === 'remove') {
+        this.moreQuerys = this.moreQuerys.filter(query => query.name !== targetName);
+        if (this.selectedTable === targetName) {
+          this.selectedTable = '';
+        }
+      }
+      if (action === 'add') {
+        this.addMoreQuery();
+      }
+    },
     async querySql(query) {
       console.log("querySql", query);
       const result = await window.api.queryDatabase(query.sql, []);
       console.log("result", result);
+      if (result.error) {
+        this.$message.error(result.message);
+        return;
+      }
       query.result = result;
       if (result.length > 0) {
-        query.resultColumns = Object.keys(result[0]);
+        let queryResultColumns = [];
+        let resultColumns = Object.keys(result[0]);
+        for (let i = 0; i < resultColumns.length; i++) {
+          let column = {
+            title: resultColumns[i],
+            key: resultColumns[i],
+            dataKey: resultColumns[i],
+            width: 100,
+            sortable: true
+          }
+          queryResultColumns.push(column)
+        }
+        query.resultColumns = queryResultColumns;
       }
     },
     addMoreQuery() {
+      let queryName = "query" + (this.moreQuerys.length + 1);
       this.moreQuerys.push({
-        name: "query" + (this.moreQuerys.length + 1),
+        name: queryName,
         sql: '',
-        result: []
+        result: [],
+        resultColumns: []
       });
+      this.selectedTab = queryName;
       console.log("moreQuerys", this.moreQuerys);
     },
     async selectTable(table) {
@@ -91,8 +144,17 @@ export default {
       this.tableData = result;
       const tableColumns = await window.api.queryDatabase('show columns from ' + table + ';', []);
       console.log("tableColumns", tableColumns);
+      for (let i = 0; i < tableColumns.length; i++) {
+        tableColumns[i]['title'] = tableColumns[i]['Field'];
+        tableColumns[i]['key'] = tableColumns[i]['Field'];
+        tableColumns[i]['dataKey'] = tableColumns[i]['Field'];
+        tableColumns[i]['width'] = 100;
+        tableColumns[i]['sortable'] = true;
+      }
+      console.log("tableColumns", tableColumns);
       this.tableColumns = tableColumns;
       this.selectedTable = table;
+      this.selectedTab = table;
     },
     async selectDatabase(database) {
       console.log(database, "selectDatabase");
