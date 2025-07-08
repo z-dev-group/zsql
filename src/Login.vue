@@ -25,10 +25,10 @@
 import { ref } from 'vue';
 import { ElMessage } from 'element-plus';
 
-const host = ref('10.16.6.152');
-const port = ref('3306');
-const username = ref('kfc');
-const password = ref('kfc');
+const host = ref('localhost');
+const port = ref('3307');
+const username = ref('root');
+const password = ref('');
 import store from './store';
 
 async function handleLogin() {
