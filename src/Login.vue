@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1>登录</h1>
+    <h2>主机登录</h2>
     <el-form @submit.prevent="handleLogin" label-width="60px" ref="formRef" :model="form">
       <el-form-item label="主机" :rules="[{ required: true, message: '请输入主机' }]" prop="host">
         <el-input v-model="form.host" />
@@ -22,9 +22,12 @@
         <el-button type="danger" @click="clearLastConnectionConfig">清除</el-button>
       </el-form-item>
     </el-form>
-    <div>添加下面tag可以快速连接</div>
-    <el-tag style="cursor: pointer; margin-top: 10px;" v-for="item, name in connectionConfigs" :key="item" closable
-      @close="handleCloseConnection(name)" @click="handleSelectConnection(item)">{{ name }}</el-tag>
+    <div style="padding: 10px;">
+      <div style="color: #999; font-size: 14px;">添加下面tag可以快速连接</div>
+      <el-tag style="cursor: pointer; margin-top: 10px; margin-left: 10px;" v-for="item, name in connectionConfigs"
+        :key="item" closable @close="handleCloseConnection(name)" @click="handleSelectConnection(item)">{{ name
+        }}</el-tag>
+    </div>
   </div>
 </template>
 

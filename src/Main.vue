@@ -1,59 +1,105 @@
 <template>
-  <div style="padding: 10px;">
-    <div style="display: flex;">
-      <div style="width: 200px; border-left: 1px solid #e6e6e6; padding-left: 10px;">
-        <div>
-          <el-select v-model="selectedDatabase" placeholder="请选择数据库" filterable style="width: 100%;" clearable>
-            <el-option v-for="database in databases" :key="database" :label="database" :value="database" />
-          </el-select>
-          <el-input v-model="filterTable" placeholder="请输入表名进行过滤" v-if="selectedDatabase"
-            style="width: 100%; margin-top: 10px;" clearable size="small" />
+  <div style="padding: 5px;">
+    <el-splitter>
+      <el-splitter-panel size="200px" max="50%" min="200px">
+        <div style="padding-right: 5px;">
+          <div>
+            <div style="width: 100%;">
+              <el-select v-model="selectedDatabase" placeholder="请选择数据库" filterable
+                style="width: calc(100% - 30px); margin-top: 1px;" clearable>
+                <el-option v-for="database in databases" :key="database" :label="database" :value="database" />
+              </el-select>
+              <el-button type="text" @click="beginCreateDatabase" style="width: 30px;">
+                <img :src="newDbImage" style="width: 20px; height: 20px;" />
+              </el-button>
+            </div>
+            <div v-if="selectedDatabase">
+              <el-input v-model="filterTable" placeholder="请输入关键字进行表过滤"
+                style="width: calc(100% - 40px); margin-top: 10px;" clearable size="small" />
+              <el-button type="text" @click="beginCreateTable" style="width: 40px; margin-top:10px;">
+                <img :src="newTableImage" style="width: 20px; height: 20px;" />
+              </el-button>
+            </div>
+          </div>
+          <div style="background-color: #eee; padding: 3px; margin-top: 1px;">
+            <div style="font-size: 14px; margin-top: 5px; margin-left: 7px; color: #999;">表与视图：</div>
+            <el-menu v-if="selectedDatabase" style="margin-left: -12px; background-color: #eee;">
+              <el-menu-item v-for="table in showTables" :key="table.name" :index="table.name" style="height: 35px;"
+                @click="selectTable(table.name)">{{ table.name }}</el-menu-item>
+            </el-menu>
+            <div v-else style="height: 100vh; display: flex; justify-content: center; align-items: center;">
+              <el-empty description="请选择数据库" />
+            </div>
+          </div>
         </div>
-        <el-menu v-if="selectedDatabase" style="height: 30px;">
-          <el-menu-item v-for="table in showTables" :key="table.name" :index="table.name" style="height: 35px;"
-            @click="selectTable(table.name)">{{ table.name }}</el-menu-item>
-        </el-menu>
-        <div v-else style="height: 100vh; display: flex; justify-content: center; align-items: center;">
-          <el-empty description="请选择数据库" />
-        </div>
-      </div>
-      <div style="flex: 1; margin-left: 3px;">
-        <el-tabs v-model="selectedTab" type="card" editable @edit="handleEditTab">
-          <el-tab-pane v-if="selectedTable" :label="selectedTable" :name="selectedTable">
-            <el-row>
-              <el-col :span="20">
+      </el-splitter-panel>
+      <el-splitter-panel>
+        <div style="flex: 1; margin-left: 5px;">
+          <el-tabs v-model="selectedTab" type="card" editable @edit="handleEditTab">
+            <el-tab-pane v-if="selectedTable" :label="selectedTable" :name="selectedTable">
+              <div>
                 <el-input v-model="tableWhereCondition" placeholder="查询条件"></el-input>
-              </el-col>
-              <el-col :span="4">
-                <el-button type="primary" @click="queryTable(selectedTable, tableWhereCondition)">查询</el-button>
-              </el-col>
-            </el-row>
-            <div style="height: 100vh">
-              <el-auto-resizer>
-                <template #default="{ height, width }">
-                  <el-table-v2 :data="tableData" :width="width" :height="height" :columns="tableColumns"
-                    fixed></el-table-v2>
-                </template>
-              </el-auto-resizer>
-            </div>
-          </el-tab-pane>
-          <el-tab-pane v-for="query in moreQuerys" :key="query.name" :label="query.name" :name="query.name">
-            <el-input v-model="query.sql" type="textarea" :rows="3" />
-            <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
-              <el-button type="primary" @click="querySql(query)">查询</el-button>
-            </div>
-            <div style="height: 100vh">
-              <el-auto-resizer>
-                <template #default="{ height, width }">
-                  <el-table-v2 :data="query.result" :width="width" :height="height" :columns="query.resultColumns"
-                    fixed></el-table-v2>
-                </template>
-              </el-auto-resizer>
-            </div>
-          </el-tab-pane>
-        </el-tabs>
-      </div>
-    </div>
+              </div>
+              <el-row>
+                <el-col :span="20">
+                  <div style="margin-top: 20px; font-size: 14px; color: #999;">查询到{{ tableData.length }}结果,如下：</div>
+                </el-col>
+                <el-col :span="4">
+                  <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                    <el-button type="primary" @click="queryTable(selectedTable, tableWhereCondition)">查询</el-button>
+                  </div>
+                </el-col>
+              </el-row>
+              <div style="height: 100vh">
+                <el-auto-resizer>
+                  <template #default="{ height, width }">
+                    <el-table-v2 :data="tableData" :width="width" :height="height" :columns="tableColumns"
+                      fixed></el-table-v2>
+                  </template>
+                </el-auto-resizer>
+              </div>
+            </el-tab-pane>
+            <el-tab-pane v-for="query in moreQuerys" :key="query.name" :label="query.name" :name="query.name">
+              <el-input v-model="query.sql" type="textarea" :rows="3" />
+              <el-row>
+                <el-col :span="20">
+                  <div v-if="query.queryed" style="margin-top: 20px; font-size: 14px; color: #999;">
+                    查询到{{ query.result.length }}结果,如下：
+                  </div>
+                </el-col>
+                <el-col :span="4">
+                  <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                    <el-button type="primary" @click="querySql(query)">查询</el-button>
+                  </div>
+                </el-col>
+              </el-row>
+              <div style="height: 100vh">
+                <el-auto-resizer>
+                  <template #default="{ height, width }">
+                    <el-table-v2 :data="query.result" :width="width" :height="height" :columns="query.resultColumns"
+                      fixed></el-table-v2>
+                  </template>
+                </el-auto-resizer>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+        </div>
+      </el-splitter-panel>
+    </el-splitter>
+    <el-dialog v-model="showCreateDatabaseModal" title="新建数据库" width="30%">
+      <el-input v-model="newDatabaseName" placeholder="请输入数据库名称" />
+      <template #footer>
+        <el-button @click="showCreateDatabaseModal = false">取消</el-button>
+        <el-button type="primary" @click="createDatabase">确定</el-button>
+      </template>
+    </el-dialog>
+    <el-dialog v-model="showCreateTableModal" title="新建表" width="30%">
+      <el-input v-model="newTableName" placeholder="请输入表名称" />
+      <template #footer>
+        <el-button @click="showCreateTableModal = false">取消</el-button>
+        <el-button type="primary" @click="createTable">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -61,6 +107,8 @@
 import store from './store';
 import { ref } from 'vue';
 const databases = ref(store.databases);
+import newDbImage from './Main/assets/images/new_db.jpeg';
+import newTableImage from './Main/assets/images/new_table.png'
 export default {
   name: 'Main',
   data() {
@@ -73,7 +121,13 @@ export default {
       moreQuerys: [],
       selectedTab: '',
       filterTable: '',
-      tableWhereCondition: ''
+      tableWhereCondition: '',
+      showCreateDatabaseModal: false,
+      showCreateTableModal: false,
+      newDatabaseName: '',
+      newTableName: '',
+      newDbImage: newDbImage,
+      newTableImage: newTableImage
     }
   },
   computed: {
@@ -99,6 +153,20 @@ export default {
     }
   },
   methods: {
+    beginCreateDatabase() {
+      this.showCreateDatabaseModal = true;
+      console.log("beginCreateDatabase");
+    },
+    beginCreateTable() {
+      console.log("beginCreateTable");
+      this.showCreateTableModal = true;
+    },
+    createDatabase() {
+      console.log("createDatabase", this.newDatabaseName);
+    },
+    createTable() {
+      console.log("createTable", this.newTableName);
+    },
     handleEditTab(targetName, action) {
       console.log("handleEditTab", targetName, action);
       if (action === 'remove') {
@@ -119,6 +187,7 @@ export default {
         this.$message.error(result.message);
         return;
       }
+      query.queryed = true;
       query.result = result;
       if (result.length > 0) {
         let queryResultColumns = [];
@@ -142,7 +211,8 @@ export default {
         name: queryName,
         sql: '',
         result: [],
-        resultColumns: []
+        resultColumns: [],
+        queryed: false
       });
       this.selectedTab = queryName;
       console.log("moreQuerys", this.moreQuerys);
