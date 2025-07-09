@@ -288,7 +288,7 @@ export default {
       this.tables = tables;
     },
     async deleteDatabase() {
-      this.$confirm('是否删除数据库？', '提示', {
+      this.$confirm('是否删除数据库' + this.selectedDatabase + '？', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
