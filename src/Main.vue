@@ -12,6 +12,7 @@
               <el-button type="text" @click="beginCreateDatabase" style="width: 30px;">
                 <img :src="newDbImage" style="width: 20px; height: 20px;" />
               </el-button>
+              <el-button type="text" v-if="canDeleteDatabase" @click="deleteDatabase" style="margin-left: 0px; color: red">删除该数据库</el-button>
             </div>
             <div v-if="selectedDatabase">
               <el-input v-model="filterTable" placeholder="请输入关键字进行表过滤"
@@ -137,6 +138,10 @@ export default {
     showTables() {
       if (!this.filterTable) return this.tables;
       return this.tables.filter(table => table.name.includes(this.filterTable));
+    },
+    canDeleteDatabase() {
+      let systemDatabases = ['sys', 'mysql', 'information_schema', 'performance_schema'];
+      return !systemDatabases.includes(this.selectedDatabase) && this.selectedDatabase;
     }
   },
   watch: {
@@ -161,11 +166,32 @@ export default {
       console.log("beginCreateTable");
       this.showCreateTableModal = true;
     },
-    createDatabase() {
+    async createDatabase() {
       console.log("createDatabase", this.newDatabaseName);
+      if (!this.newDatabaseName) {
+        this.$message.error('请输入数据库名称');
+        return;
+      }
+      if (this.databases.includes(this.newDatabaseName)) {
+        this.$message.error('数据库已存在');
+        return;
+      }
+      let resutl = await window.api.createDatabase(this.newDatabaseName);
+      if (resutl.error) {
+        this.$message.error(resutl.message);
+        return;
+      }
+      this.showCreateDatabaseModal = false;
+      this.$message.success('创建数据库成功');
+      store.addDatabase(this.newDatabaseName)
+      this.newDatabaseName = '';
     },
     createTable() {
       console.log("createTable", this.newTableName);
+      if (!this.newTableName) {
+        this.$message.error('请输入表名称');
+        return;
+      }
     },
     handleEditTab(targetName, action) {
       console.log("handleEditTab", targetName, action);
@@ -260,6 +286,26 @@ export default {
       }
       console.log("xxx", tables);
       this.tables = tables;
+    },
+    async deleteDatabase() {
+      this.$confirm('是否删除数据库？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        let result = await window.api.deleteDatabase(this.selectedDatabase);
+        console.log(result)
+
+        if (result.error) {
+          this.$message.error(result.message);
+          return;
+        }
+        this.$message.success('删除数据库成功');
+        store.removeDatabase(this.selectedDatabase);
+        this.selectedDatabase = ""
+      }).catch(() => {
+        
+      });
     }
   }
 }

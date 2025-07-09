@@ -87,3 +87,31 @@ ipcMain.handle('select-database', async (event, database) => {
     return { error: "select_database_failed", message: "选择数据库失败" };
   }
 });
+
+ipcMain.handle('create-database', async (event, database) => {
+  try {
+    let connection = await initConnection(gConfig);
+    if (!connection) {
+      return { error: "create_database_failed", message: "连接数据库失败" };
+    }
+    let result = await connection.query(`CREATE DATABASE ${database}`);
+    console.log(result)
+    return { error: "", message: "create_database_success" };
+  } catch (error) {
+    return { error: "create_database_failed", message: "创建数据库失败:" + error.message };
+  }
+});
+
+ipcMain.handle('delete-database', async (event, database) => {
+  try {
+    let connection = await initConnection(gConfig);
+    if (!connection) {
+      return { error: "delete_database_failed", message: "连接数据库失败" };
+    }
+    let result = await connection.query(`DROP DATABASE IF EXISTS ${database}`);
+    console.log(result)
+    return { error: "", message: "delete_database_success" }; 
+  } catch (error) {
+    return { error: "delete_database_failed", message: "删除数据库失败:" + error.message };
+  }
+})

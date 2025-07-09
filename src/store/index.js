@@ -28,7 +28,12 @@ const store = reactive({
       this.databases.push(dbName)
     }
   },
-  
+  removeDatabase(dbName) {
+    let index = this.databases.indexOf(dbName);
+    if (index !== -1) {
+      this.databases.splice(index, 1);
+    }
+  },
   // 清空数据库列表
   clearDatabases() {
     this.databases = []
