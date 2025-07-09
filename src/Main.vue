@@ -6,7 +6,8 @@
           <el-select v-model="selectedDatabase" placeholder="请选择数据库" filterable style="width: 100%;" clearable>
             <el-option v-for="database in databases" :key="database" :label="database" :value="database" />
           </el-select>
-          <el-input v-model="filterTable" placeholder="请输入表名进行过滤" v-if="selectedDatabase" style="width: 100%; margin-top: 10px;" clearable size="small" />
+          <el-input v-model="filterTable" placeholder="请输入表名进行过滤" v-if="selectedDatabase"
+            style="width: 100%; margin-top: 10px;" clearable size="small" />
         </div>
         <el-menu v-if="selectedDatabase" style="height: 30px;">
           <el-menu-item v-for="table in showTables" :key="table.name" :index="table.name" style="height: 35px;"
@@ -19,6 +20,14 @@
       <div style="flex: 1; margin-left: 3px;">
         <el-tabs v-model="selectedTab" type="card" editable @edit="handleEditTab">
           <el-tab-pane v-if="selectedTable" :label="selectedTable" :name="selectedTable">
+            <el-row>
+              <el-col :span="20">
+                <el-input v-model="tableWhereCondition" placeholder="查询条件"></el-input>
+              </el-col>
+              <el-col :span="4">
+                <el-button type="primary" @click="queryTable(selectedTable, tableWhereCondition)">查询</el-button>
+              </el-col>
+            </el-row>
             <div style="height: 100vh">
               <el-auto-resizer>
                 <template #default="{ height, width }">
@@ -63,7 +72,8 @@ export default {
       selectedTable: '',
       moreQuerys: [],
       selectedTab: '',
-      filterTable: ''
+      filterTable: '',
+      tableWhereCondition: ''
     }
   },
   computed: {
@@ -137,9 +147,18 @@ export default {
       this.selectedTab = queryName;
       console.log("moreQuerys", this.moreQuerys);
     },
-    async selectTable(table) {
+    async queryTable(table, whereCondition) {
+      return await this.selectTable(table, whereCondition);
+    },
+    async selectTable(table, whereCondition = "") {
       console.log(table, "selectTable");
-      const result = await window.api.queryDatabase('select * from ' + table + ';', []);
+      let querySql = 'select * from ' + table;
+      if (whereCondition) {
+        querySql += ' where ' + whereCondition;
+      } else {
+        this.tableWhereCondition = '';
+      }
+      const result = await window.api.queryDatabase(querySql + ';', []);
       console.log("result", result);
       this.tableData = result;
       const tableColumns = await window.api.queryDatabase('show columns from ' + table + ';', []);
