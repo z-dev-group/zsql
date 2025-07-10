@@ -10,18 +10,18 @@ const store = reactive({
     username: '',
     password: '',
     database: ''
-  },        
+  },
   // 登录方法
   login() {
     this.isLogin = true
   },
-  
+
   // 登出方法
   logout() {
     this.isLogin = false
     this.databases = []
   },
-  
+
   // 添加数据库
   addDatabase(dbName) {
     if (!this.databases.includes(dbName)) {

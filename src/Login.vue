@@ -65,7 +65,6 @@ async function handleLogin(formRef) {
   });
 }
 async function doHandleLogin() {
-  // 这里只做简单打印，后续可扩展为实际登录逻辑
   console.log('Host:', form.host);
   console.log('Port:', form.port);
   console.log('Username:', form.username);

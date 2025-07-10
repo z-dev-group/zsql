@@ -22,13 +22,13 @@
               </el-button>
             </div>
           </div>
-          <div style="background-color: #eee; padding: 3px; margin-top: 1px;">
+          <div style="background-color: #eee; padding: 3px; margin-top: 1px; height: 80vh;">
             <div style="font-size: 14px; margin-top: 5px; margin-left: 7px; color: #999;">表与视图：</div>
             <el-menu v-if="selectedDatabase" style="margin-left: -12px; background-color: #eee;">
               <el-menu-item v-for="table in showTables" :key="table.name" :index="table.name" style="height: 35px;"
                 @click="selectTable(table.name)">{{ table.name }}</el-menu-item>
             </el-menu>
-            <div v-else style="height: 100vh; display: flex; justify-content: center; align-items: center;">
+            <div v-else style="height: 80vh; display: flex; justify-content: center; align-items: center;">
               <el-empty description="请选择数据库" />
             </div>
           </div>
@@ -51,7 +51,7 @@
                   </div>
                 </el-col>
               </el-row>
-              <div style="height: 100vh">
+              <div>
                 <el-auto-resizer>
                   <template #default="{ height, width }">
                     <el-table-v2 :data="tableData" :width="width" :height="height" :columns="tableColumns"
@@ -74,7 +74,7 @@
                   </div>
                 </el-col>
               </el-row>
-              <div style="height: 100vh">
+              <div>
                 <el-auto-resizer>
                   <template #default="{ height, width }">
                     <el-table-v2 :data="query.result" :width="width" :height="height" :columns="query.resultColumns"
@@ -104,209 +104,211 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, watch } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import store from './store';
-import { ref } from 'vue';
-const databases = ref(store.databases);
 import newDbImage from './Main/assets/images/new_db.jpeg';
-import newTableImage from './Main/assets/images/new_table.png'
-export default {
-  name: 'Main',
-  data() {
-    return {
-      tables: [],
-      selectedDatabase: '',
-      tableColumns: [],
-      tableData: [],
-      selectedTable: '',
-      moreQuerys: [],
-      selectedTab: '',
-      filterTable: '',
-      tableWhereCondition: '',
-      showCreateDatabaseModal: false,
-      showCreateTableModal: false,
-      newDatabaseName: '',
-      newTableName: '',
-      newDbImage: newDbImage,
-      newTableImage: newTableImage
-    }
-  },
-  computed: {
-    databases() {
-      return store.databases;
-    },
-    showTables() {
-      if (!this.filterTable) return this.tables;
-      return this.tables.filter(table => table.name.includes(this.filterTable));
-    },
-    canDeleteDatabase() {
-      let systemDatabases = ['sys', 'mysql', 'information_schema', 'performance_schema'];
-      return !systemDatabases.includes(this.selectedDatabase) && this.selectedDatabase;
-    }
-  },
-  watch: {
-    selectedDatabase: {
-      handler(newVal) {
-        if (!newVal) {
-          this.selectedTable = '';
-          return;
-        }
-        this.filterTable = '';
-        this.selectDatabase(newVal);
-      },
-      immediate: true
-    }
-  },
-  methods: {
-    beginCreateDatabase() {
-      this.showCreateDatabaseModal = true;
-      console.log("beginCreateDatabase");
-    },
-    beginCreateTable() {
-      console.log("beginCreateTable");
-      this.showCreateTableModal = true;
-    },
-    async createDatabase() {
-      console.log("createDatabase", this.newDatabaseName);
-      if (!this.newDatabaseName) {
-        this.$message.error('请输入数据库名称');
-        return;
-      }
-      if (this.databases.includes(this.newDatabaseName)) {
-        this.$message.error('数据库已存在');
-        return;
-      }
-      let resutl = await window.api.createDatabase(this.newDatabaseName);
-      if (resutl.error) {
-        this.$message.error(resutl.message);
-        return;
-      }
-      this.showCreateDatabaseModal = false;
-      this.$message.success('创建数据库成功');
-      store.addDatabase(this.newDatabaseName)
-      this.newDatabaseName = '';
-    },
-    createTable() {
-      console.log("createTable", this.newTableName);
-      if (!this.newTableName) {
-        this.$message.error('请输入表名称');
-        return;
-      }
-    },
-    handleEditTab(targetName, action) {
-      console.log("handleEditTab", targetName, action);
-      if (action === 'remove') {
-        this.moreQuerys = this.moreQuerys.filter(query => query.name !== targetName);
-        if (this.selectedTable === targetName) {
-          this.selectedTable = '';
-        }
-      }
-      if (action === 'add') {
-        this.addMoreQuery();
-      }
-    },
-    async querySql(query) {
-      console.log("querySql", query);
-      const result = await window.api.queryDatabase(query.sql, []);
-      console.log("result", result);
-      if (result.error) {
-        this.$message.error(result.message);
-        return;
-      }
-      query.queryed = true;
-      query.result = result;
-      if (result.length > 0) {
-        let queryResultColumns = [];
-        let resultColumns = Object.keys(result[0]);
-        for (let i = 0; i < resultColumns.length; i++) {
-          let column = {
-            title: resultColumns[i],
-            key: resultColumns[i],
-            dataKey: resultColumns[i],
-            width: 100,
-            sortable: true
-          }
-          queryResultColumns.push(column)
-        }
-        query.resultColumns = queryResultColumns;
-      }
-    },
-    addMoreQuery() {
-      let queryName = "query" + (this.moreQuerys.length + 1);
-      this.moreQuerys.push({
-        name: queryName,
-        sql: '',
-        result: [],
-        resultColumns: [],
-        queryed: false
-      });
-      this.selectedTab = queryName;
-      console.log("moreQuerys", this.moreQuerys);
-    },
-    async queryTable(table, whereCondition) {
-      return await this.selectTable(table, whereCondition);
-    },
-    async selectTable(table, whereCondition = "") {
-      console.log(table, "selectTable");
-      let querySql = 'select * from ' + table;
-      if (whereCondition) {
-        querySql += ' where ' + whereCondition;
-      } else {
-        this.tableWhereCondition = '';
-      }
-      const result = await window.api.queryDatabase(querySql + ';', []);
-      console.log("result", result);
-      this.tableData = result;
-      const tableColumns = await window.api.queryDatabase('show columns from ' + table + ';', []);
-      console.log("tableColumns", tableColumns);
-      for (let i = 0; i < tableColumns.length; i++) {
-        tableColumns[i]['title'] = tableColumns[i]['Field'];
-        tableColumns[i]['key'] = tableColumns[i]['Field'];
-        tableColumns[i]['dataKey'] = tableColumns[i]['Field'];
-        tableColumns[i]['width'] = 100;
-        tableColumns[i]['sortable'] = true;
-      }
-      console.log("tableColumns", tableColumns);
-      this.tableColumns = tableColumns;
-      this.selectedTable = table;
-      this.selectedTab = table;
-    },
-    async selectDatabase(database) {
-      console.log(database, "selectDatabase");
-      store.selectDatabase(database);
-      store.connectionConfig.database = database;
-      await window.api.selectDatabase(database);
-      const result = await window.api.queryDatabase('show tables;', []);
-      let tables = [];
-      console.log("result", result);
-      for (let i = 0; i < result.length; i++) {
-        tables.push({
-          name: result[i]['Tables_in_' + database]
-        });
-      }
-      console.log("xxx", tables);
-      this.tables = tables;
-    },
-    async deleteDatabase() {
-      this.$confirm('是否删除数据库' + this.selectedDatabase + '？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(async () => {
-        let result = await window.api.deleteDatabase(this.selectedDatabase);
-        console.log(result)
+import newTableImage from './Main/assets/images/new_table.png';
 
-        if (result.error) {
-          this.$message.error(result.message);
-          return;
-        }
-        this.$message.success('删除数据库成功');
-        store.removeDatabase(this.selectedDatabase);
-        this.selectedDatabase = ""
-      }).catch(() => {
-        
-      });
+// 响应式数据
+const tables = ref([]);
+const selectedDatabase = ref('');
+const tableColumns = ref([]);
+const tableData = ref([]);
+const selectedTable = ref('');
+const moreQuerys = ref([]);
+const selectedTab = ref('');
+const filterTable = ref('');
+const tableWhereCondition = ref('');
+const showCreateDatabaseModal = ref(false);
+const showCreateTableModal = ref(false);
+const newDatabaseName = ref('');
+const newTableName = ref('');
+
+// 计算属性
+const databases = computed(() => store.databases);
+
+const showTables = computed(() => {
+  if (!filterTable.value) return tables.value;
+  return tables.value.filter(table => table.name.includes(filterTable.value));
+});
+
+const canDeleteDatabase = computed(() => {
+  let systemDatabases = ['sys', 'mysql', 'information_schema', 'performance_schema'];
+  return !systemDatabases.includes(selectedDatabase.value) && selectedDatabase.value;
+});
+
+// 监听器
+watch(selectedDatabase, (newVal) => {
+  if (!newVal) {
+    selectedTable.value = '';
+    return;
+  }
+  filterTable.value = '';
+  selectDatabase(newVal);
+}, { immediate: true });
+
+// 方法
+const beginCreateDatabase = () => {
+  showCreateDatabaseModal.value = true;
+  console.log("beginCreateDatabase");
+};
+
+const beginCreateTable = () => {
+  console.log("beginCreateTable");
+  showCreateTableModal.value = true;
+};
+
+const createDatabase = async () => {
+  console.log("createDatabase", newDatabaseName.value);
+  if (!newDatabaseName.value) {
+    ElMessage.error('请输入数据库名称');
+    return;
+  }
+  if (databases.value.includes(newDatabaseName.value)) {
+    ElMessage.error('数据库已存在');
+    return;
+  }
+  let result = await window.api.createDatabase(newDatabaseName.value);
+  if (result.error) {
+    ElMessage.error(result.message);
+    return;
+  }
+  showCreateDatabaseModal.value = false;
+  ElMessage.success('创建数据库成功');
+  store.addDatabase(newDatabaseName.value);
+  newDatabaseName.value = '';
+};
+
+const createTable = () => {
+  console.log("createTable", newTableName.value);
+  if (!newTableName.value) {
+    ElMessage.error('请输入表名称');
+    return;
+  }
+};
+
+const handleEditTab = (targetName, action) => {
+  console.log("handleEditTab", targetName, action);
+  if (action === 'remove') {
+    moreQuerys.value = moreQuerys.value.filter(query => query.name !== targetName);
+    if (selectedTable.value === targetName) {
+      selectedTable.value = '';
     }
   }
-}
+  if (action === 'add') {
+    addMoreQuery();
+  }
+};
+
+const querySql = async (query) => {
+  console.log("querySql", query);
+  const result = await window.api.queryDatabase(query.sql, []);
+  console.log("result", result);
+  if (result.error) {
+    ElMessage.error(result.message);
+    return;
+  }
+  query.queryed = true;
+  query.result = result;
+  if (result.length > 0) {
+    let queryResultColumns = [];
+    let resultColumns = Object.keys(result[0]);
+    for (let i = 0; i < resultColumns.length; i++) {
+      let column = {
+        title: resultColumns[i],
+        key: resultColumns[i],
+        dataKey: resultColumns[i],
+        width: 100,
+        sortable: true
+      };
+      queryResultColumns.push(column);
+    }
+    query.resultColumns = queryResultColumns;
+  }
+};
+
+const addMoreQuery = () => {
+  let queryName = "query" + (moreQuerys.value.length + 1);
+  moreQuerys.value.push({
+    name: queryName,
+    sql: '',
+    result: [],
+    resultColumns: [],
+    queryed: false
+  });
+  selectedTab.value = queryName;
+  console.log("moreQuerys", moreQuerys.value);
+};
+
+const queryTable = async (table, whereCondition) => {
+  return await selectTable(table, whereCondition);
+};
+
+const selectTable = async (table, whereCondition = "") => {
+  console.log(table, "selectTable");
+  let querySql = 'select * from ' + table;
+  if (whereCondition) {
+    querySql += ' where ' + whereCondition;
+  } else {
+    tableWhereCondition.value = '';
+  }
+  const result = await window.api.queryDatabase(querySql + ';', []);
+  console.log("result", result);
+  tableData.value = result;
+  const tableColumnsResult = await window.api.queryDatabase('show columns from ' + table + ';', []);
+  console.log("tableColumns", tableColumnsResult);
+  for (let i = 0; i < tableColumnsResult.length; i++) {
+    tableColumnsResult[i]['title'] = tableColumnsResult[i]['Field'];
+    tableColumnsResult[i]['key'] = tableColumnsResult[i]['Field'];
+    tableColumnsResult[i]['dataKey'] = tableColumnsResult[i]['Field'];
+    tableColumnsResult[i]['width'] = 100;
+    tableColumnsResult[i]['sortable'] = true;
+  }
+  console.log("tableColumns", tableColumnsResult);
+  tableColumns.value = tableColumnsResult;
+  selectedTable.value = table;
+  selectedTab.value = table;
+};
+
+const selectDatabase = async (database) => {
+  console.log(database, "selectDatabase");
+  store.selectDatabase(database);
+  store.connectionConfig.database = database;
+  await window.api.selectDatabase(database);
+  const result = await window.api.queryDatabase('show tables;', []);
+  let tablesList = [];
+  console.log("result", result);
+  for (let i = 0; i < result.length; i++) {
+    tablesList.push({
+      name: result[i]['Tables_in_' + database]
+    });
+  }
+  console.log("xxx", tablesList);
+  tables.value = tablesList;
+};
+
+const deleteDatabase = async () => {
+  try {
+    await ElMessageBox.confirm('是否删除数据库' + selectedDatabase.value + '？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+    
+    let result = await window.api.deleteDatabase(selectedDatabase.value);
+    console.log(result);
+
+    if (result.error) {
+      ElMessage.error(result.message);
+      return;
+    }
+    ElMessage.success('删除数据库成功');
+    store.removeDatabase(selectedDatabase.value);
+    selectedDatabase.value = "";
+  } catch (error) {
+    // 用户取消操作
+  }
+};
 </script>

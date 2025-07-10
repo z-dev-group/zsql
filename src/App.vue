@@ -5,22 +5,13 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { computed } from 'vue';
 import Login from "./Login.vue";
 import Main from "./Main.vue";
 import store from "./store";
-export default {
-  name: "App",
-  computed: {
-    isLogined() {
-      return store.isLogin;
-    }
-  },
-  components: {
-    Login,
-    Main
-  }
-};
+
+const isLogined = computed(() => store.isLogin);
 </script>
 
 <style>
