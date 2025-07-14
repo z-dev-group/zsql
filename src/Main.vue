@@ -354,18 +354,21 @@ const beginInsertTable = () => {
 
 const insertTable = async () => {
   console.log("insertTable", insertTableData.value, tableColumns.value);
-  let insertTableSql = 'insert into ' + selectedTable.value;
+  let insertTableSql = 'insert into ' + selectedTable.value + " ( ";
   for (let i = 0; i < tableColumns.value.length; i++) {
     if (typeof (insertTableData.value[tableColumns.value[i].Field]) != 'undefined') {
-      insertTableSql += ' (' + tableColumns.value[i].Field + ')';
+      insertTableSql += tableColumns.value[i].Field + ',';
     }
   }
+  insertTableSql = insertTableSql.slice(0, -1);
+  insertTableSql += ' ) ';
   insertTableSql += ' values (';
   for (let i = 0; i < tableColumns.value.length; i++) {
     if (typeof (insertTableData.value[tableColumns.value[i].Field]) != 'undefined') {
-      insertTableSql += "'" + insertTableData.value[tableColumns.value[i].Field] + "'";
+      insertTableSql += "'" + insertTableData.value[tableColumns.value[i].Field] + "',";
     }
   }
+  insertTableSql = insertTableSql.slice(0, -1);
   insertTableSql += ')';
   console.log("insertTableSql", insertTableSql);
   let result = await window.api.queryDatabase(insertTableSql, []);
@@ -396,6 +399,7 @@ const deleteTable = async (tableName) => {
     return;
   }
   ElMessage.success('删除表成功');
+  selectedTable.value = '';
   selectDatabase(selectedDatabase.value);
 }
 
@@ -527,7 +531,7 @@ const beginDeleteTableData = (params) => {
 const beginUpdateTableData = (params) => {
   console.log("beginUpdateTableData", params);
   showUpdateTableDataModal.value = true;
-  updateTableData.value = params.rowData;
+  updateTableData.value = JSON.parse(JSON.stringify(params.rowData));
 }
 
 const updateTable = async () => {
