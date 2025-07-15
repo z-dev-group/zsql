@@ -44,7 +44,7 @@
                   </span>
                   <template #dropdown>
                     <el-dropdown-menu>
-                      <el-dropdown-item @click="beginDeleteTable(table.name)">删除</el-dropdown-item>
+                      <el-dropdown-item @click="beginDeleteTable(table.name)" style="color: red;" :disabled="!canDeleteTable">删除</el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
                 </el-dropdown>
@@ -249,6 +249,10 @@ const showTables = computed(() => {
 const canDeleteDatabase = computed(() => {
   let systemDatabases = ['sys', 'mysql', 'information_schema', 'performance_schema'];
   return !systemDatabases.includes(selectedDatabase.value) && selectedDatabase.value;
+});
+
+const canDeleteTable = computed(() => {
+  return canDeleteDatabase.value;
 });
 
 // 监听器
