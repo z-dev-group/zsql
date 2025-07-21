@@ -61,7 +61,15 @@
           <el-tabs v-model="selectedTab" type="card" editable @edit="handleEditTab">
             <el-tab-pane v-if="selectedTable" :label="selectedTable" :name="selectedTable">
               <div>
-                <el-input v-model="tableWhereCondition" placeholder="查询条件"></el-input>
+                <el-input v-model="tableWhereCondition" placeholder="查询条件" style="width: calc(100% - 100px);"></el-input>
+                <el-select v-model="tableQueryLimit" placeholder="查询条数" style="width: 100px;">
+                  <el-option label="1" value="1" />
+                  <el-option label="5" value="5" />
+                  <el-option label="20" value="20" />
+                  <el-option label="50" value="50" />
+                  <el-option label="100" value="100" />
+                  <el-option label="all" value="all" />
+                </el-select>
               </div>
               <el-row>
                 <el-col :span="20">
@@ -70,15 +78,14 @@
                 <el-col :span="4">
                   <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
                     <el-button type="text" @click="beginInsertTable">新增记录</el-button>
-                    <el-button type="primary" @click="queryTable(selectedTable, tableWhereCondition)">查询</el-button>
+                    <el-button type="primary" @click="queryTable(selectedTable, tableWhereCondition, tableQueryLimit)">查询</el-button>
                   </div>
                 </el-col>
               </el-row>
               <div style="height: 80vh;">
                 <el-auto-resizer>
                   <template #default="{ height, width }">
-                    <el-table-v2 :data="tableData" :width="width" :height="height" :columns="tableColumns"
-                      fixed></el-table-v2>
+                    <el-table-v2 :data="tableData" :width="width" :height="height" :columns="tableColumns" fixed @column-sort="onTableSort" :sort-by="tableDataSortBy"></el-table-v2>
                   </template>
                 </el-auto-resizer>
               </div>
@@ -237,6 +244,8 @@ const showInsertTableModal = ref(false);
 const insertTableData = ref({});
 const showUpdateTableDataModal = ref(false);
 const updateTableData = ref({});
+const tableQueryLimit = ref('all');
+const tableDataSortBy = ref({});
 
 // 计算属性
 const databases = computed(() => store.databases);
@@ -478,17 +487,20 @@ const addMoreQuery = () => {
   console.log("moreQuerys", moreQuerys.value);
 };
 
-const queryTable = async (table, whereCondition) => {
-  return await selectTable(table, whereCondition);
+const queryTable = async (table, whereCondition, limit) => {
+  return await selectTable(table, whereCondition, limit);
 };
 
-const selectTable = async (table, whereCondition = "") => {
+const selectTable = async (table, whereCondition = "", limit = "all") => {
   console.log(table, "selectTable");
   let querySql = 'select * from ' + table;
   if (whereCondition) {
     querySql += ' where ' + whereCondition;
   } else {
     tableWhereCondition.value = '';
+  }
+  if (limit != "all") {
+    querySql += ' limit ' + limit;
   }
   const result = await window.api.queryDatabase(querySql + ';', []);
   console.log("result", result);
@@ -631,4 +643,11 @@ const deleteDatabase = async () => {
     // 用户取消操作
   }
 };
+
+const onTableSort = (column) => {
+  console.log("onTableSort", column);
+  tableQueryLimit.value = column.order == 'ascending' ? 'asc' : 'desc';
+  console.log("tableQueryLimit", tableQueryLimit.value, selectedTable.value, tableWhereCondition.value);
+  queryTable(selectedTable.value, tableWhereCondition.value, tableQueryLimit.value);
+}
 </script>
