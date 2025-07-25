@@ -23,11 +23,13 @@
   "dependencies": {
     "@vitejs/plugin-vue": "^6.0.0",
     "@vitejs/plugin-vue-jsx": "^5.0.1",
+    "ace-builds": "^1.43.2",
     "element-plus": "^2.10.3",
     "mysql2": "^3.14.1",
     "unplugin-auto-import": "^19.3.0",
     "unplugin-vue-components": "^28.8.0",
     "vue": "^3.5.17",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "vue3-ace-editor": "^2.2.4"
   }
 }

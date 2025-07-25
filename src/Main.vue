@@ -44,7 +44,8 @@
                   </span>
                   <template #dropdown>
                     <el-dropdown-menu>
-                      <el-dropdown-item @click="beginDeleteTable(table.name)" style="color: red;" :disabled="!canDeleteTable">删除</el-dropdown-item>
+                      <el-dropdown-item @click="beginDeleteTable(table.name)" style="color: red;"
+                        :disabled="!canDeleteTable">删除</el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
                 </el-dropdown>
@@ -61,7 +62,8 @@
           <el-tabs v-model="selectedTab" type="card" editable @edit="handleEditTab">
             <el-tab-pane v-if="selectedTable" :label="selectedTable" :name="selectedTable">
               <div>
-                <el-input v-model="tableWhereCondition" placeholder="查询条件" style="width: calc(100% - 100px);"></el-input>
+                <el-input v-model="tableWhereCondition" placeholder="查询条件"
+                  style="width: calc(100% - 100px);"></el-input>
                 <el-select v-model="tableQueryLimit" placeholder="查询条数" style="width: 100px;">
                   <el-option label="1" value="1" />
                   <el-option label="5" value="5" />
@@ -78,20 +80,27 @@
                 <el-col :span="4">
                   <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
                     <el-button type="text" @click="beginInsertTable">新增记录</el-button>
-                    <el-button type="primary" @click="queryTable(selectedTable, tableWhereCondition, tableQueryLimit)">查询</el-button>
+                    <el-button type="primary"
+                      @click="queryTable(selectedTable, tableWhereCondition, tableQueryLimit)">查询</el-button>
                   </div>
                 </el-col>
               </el-row>
               <div style="height: 80vh;">
                 <el-auto-resizer>
                   <template #default="{ height, width }">
-                    <el-table-v2 :data="tableData" :width="width" :height="height" :columns="tableColumns" fixed @column-sort="onTableSort" :sort-by="tableDataSortBy"></el-table-v2>
+                    <el-table-v2 :data="tableData" :width="width" :height="height" :columns="tableColumns" fixed
+                      @column-sort="onTableSort" :sort-by="tableDataSortBy"></el-table-v2>
                   </template>
                 </el-auto-resizer>
               </div>
             </el-tab-pane>
             <el-tab-pane v-for="query in moreQuerys" :key="query.name" :label="query.name" :name="query.name">
-              <el-input v-model="query.sql" type="textarea" :rows="3" />
+              <VAceEditor v-model:value="query.sql" lang="sql" theme="chrome" style="height: 100px;" :options="{
+                enableBasicAutocompletion: true,
+                enableLiveAutocompletion: true,
+                enableSnippets: true,
+                printMargin: false,
+              }" />
               <el-row>
                 <el-col :span="20">
                   <div v-if="query.queryed" style="margin-top: 20px; font-size: 14px; color: #999;">
@@ -201,7 +210,7 @@
       <el-form :model="updateTableData" label-width="120px">
         <template v-for="column in tableColumns" :key="column.Field">
           <el-form-item v-if="column.Key != 'operations'" :label="column.Field">
-            <span v-if="column.Extra == 'auto_increment'">{{updateTableData[column.Field]}}</span>
+            <span v-if="column.Extra == 'auto_increment'">{{ updateTableData[column.Field] }}</span>
             <el-input v-else v-model="updateTableData[column.Field]" />
           </el-form-item>
         </template>
@@ -246,6 +255,37 @@ const showUpdateTableDataModal = ref(false);
 const updateTableData = ref({});
 const tableQueryLimit = ref('all');
 const tableDataSortBy = ref({});
+
+import { VAceEditor } from 'vue3-ace-editor';
+
+import modeSqlUrl from 'ace-builds/src-noconflict/mode-sql?url';
+ace.config.setModuleUrl('ace/mode/sql', modeSqlUrl);
+
+import themeChromeUrl from 'ace-builds/src-noconflict/theme-chrome?url';
+ace.config.setModuleUrl('ace/theme/chrome', themeChromeUrl);
+
+import { addCompleter} from 'ace-builds/src-noconflict/ext-language_tools';
+addCompleter({
+  getCompletions: (editor, session, pos, prefix, callback) => {
+    console.log("getCompletions", editor, session, pos, prefix);
+    let tableKeys = []
+    for (let i = 0; i < tables.value.length; i++) {
+      tableKeys.push({
+        meta: "table",
+        caption: tables.value[i].name,
+        value: tables.value[i].name
+      });
+    }
+    for (let i in tableColumns.value) {
+      tableKeys.push({
+        meta: "column",
+        caption: tableColumns.value[i].Field,
+        value: tableColumns.value[i].Field
+      });
+    }
+    callback(null, tableKeys);
+  }
+});
 
 // 计算属性
 const databases = computed(() => store.databases);
